@@ -6,7 +6,7 @@
 
 仓库一共分为3个部分：`UniBase_copy`，`UniBase_dev`和`Tips`。
 
-`UniBase_copy`克隆自[UniBase项目仓库](https://github.com/ThatcherChen/UniBase)，并修复了其中`/deps/googletest`文件克隆后为空的问题（应该），在编译运行测试文档的过程中遇到报错的同学可以尝试直接克隆并采用该文件夹下的内容进行开发。在之后的开发过程中，该文件夹的内容均不会被修改。
+`UniBase_copy`克隆自[UniBase项目仓库](https://github.com/ThatcherChen/UniBase)，并修复了其中`/deps/googletest`文件克隆后为空的问题，在编译运行测试文档的过程中遇到报错的同学可以尝试直接克隆并采用该文件夹下的内容，之后继续根据官方教学文档的内容进行编译运行。在之后的开发过程中，该文件夹的内容除非必要均不会被修改。
 
 `UniBase_dev`则是我跟随课程内容进行开发时使用的文件夹。它的内容将随着课程进行改变，是我提交课程项目的位置。目前该文件夹的内容和`UniBase_copy`一致。
 
