@@ -243,3 +243,5 @@ void DiskManager::write_log(char *log_data, int size) {
         throw UnixError();
     }
 }
+
+// 测试: 看看能否提交这行注释
