@@ -239,3 +239,5 @@ void DiskManager::write_log(char *log_data, int size) {
 }
 
 // 测试: 看看能否提交这行注释
+//cnmlgbd
+//ftr: 测试成功！！！OHHHHHHHHHHHHH
