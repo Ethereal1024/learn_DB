@@ -5,13 +5,9 @@
  * @return {bool} true: 可替换帧查找成功 , false: 可替换帧查找失败
  * @param {frame_id_t*} frame_id 帧页id指针,返回成功找到的可替换帧id
  */
-bool BufferPoolManager::find_victim_page(frame_id_t *frame_id)
-{
-    // 1 使用BufferPoolManager::free_list_判断缓冲池是否已满需要淘汰页面
-    // 1.1 未满获得frame
-    // 1.2 已满使用lru_replacer中的方法选择淘汰页面
-    if (free_list_.size())
-    {
+
+bool BufferPoolManager::find_victim_page(frame_id_t* frame_id) {
+    if (free_list_.size()) {
         *frame_id = free_list_.back();
         free_list_.pop_back();
         return true;
@@ -106,13 +102,27 @@ bool BufferPoolManager::unpin_page(PageId page_id, bool is_dirty)
 {
     // Todo:
     // 0. lock latch
+    std::lock_guard<std::mutex> guard(latch_);
     // 1. 尝试在page_table_中搜寻page_id对应的页P
+    auto it = page_table_.find(page_id);
     // 1.1 P在页表中不存在 return false
+    if (it == page_table_.end()){
+        return false;
+    }
     // 1.2 P在页表中存在，获取其pin_count_
+    frame_id_t frame_id = it->second;
+    Page* page = &pages_[frame_id];
     // 2.1 若pin_count_已经等于0，则返回false
+    if (page->pin_count_ == 0)
+        return false;
     // 2.2 若pin_count_大于0，则pin_count_自减一
+    else if (page->pin_count_ > 0)
+        page->pin_count_--;
     // 2.2.1 若自减后等于0，则调用replacer_的Unpin
+    if (page->pin_count_ == 0)
+        replacer_->unpin(frame_id);
     // 3 根据参数is_dirty，更改P的is_dirty_
+    page->is_dirty_ = is_dirty;
     return true;
 }
 
@@ -125,11 +135,19 @@ bool BufferPoolManager::flush_page(PageId page_id)
 {
     // Todo:
     // 0. lock latch
+    std::lock_guard<std::mutex> guard(latch_);
     // 1. 查找页表,尝试获取目标页P
+    auto it = page_table_.find(page_id);
     // 1.1 目标页P没有被page_table_记录 ，返回false
+    if (it == page_table_.end()){
+        return false;
+    }
+    frame_id_t frame_id = it->second;
+    Page* page = &pages_[frame_id];
     // 2. 无论P是否为脏都将其写回磁盘。
+    disk_manager_->write_page(page->id_.fd, page->id_.page_no, page->data_, PAGE_SIZE);
     // 3. 更新P的is_dirty_
-
+    page->is_dirty_ = false;
     return true;
 }
 
@@ -174,9 +192,24 @@ Page *BufferPoolManager::new_page(PageId *page_id)
 bool BufferPoolManager::delete_page(PageId page_id)
 {
     // 1.   在page_table_中查找目标页，若不存在返回true
+    auto it = page_table_.find(page_id);
+    if (it == page_table_.end()){
+        return true;
+    }
     // 2.   若目标页的pin_count不为0，则返回false
+    frame_id_t frame_id = it->second;
+    Page* page = &pages_[frame_id];
+    if (page->pin_count_ != 0)
+        return false;
     // 3.   将目标页数据写回磁盘，从页表中删除目标页，重置其元数据，将其加入free_list_，返回true
-
+    if (page->is_dirty_)
+        disk_manager_->write_page(page->id_.fd, page->id_.page_no, page->data_, PAGE_SIZE);
+    page_table_.erase(it);
+    memset(page->data_, 0, PAGE_SIZE);
+    page->id_ = {-1, INVALID_PAGE_ID};
+    page->is_dirty_ = false;
+    page->pin_count_ = 0;
+    free_list_.push_back(frame_id);
     return true;
 }
 
