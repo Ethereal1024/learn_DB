@@ -6,9 +6,6 @@
  * @param {frame_id_t*} frame_id 帧页id指针,返回成功找到的可替换帧id
  */
 bool BufferPoolManager::find_victim_page(frame_id_t* frame_id) {
-    // 1 使用BufferPoolManager::free_list_判断缓冲池是否已满需要淘汰页面
-    // 1.1 未满获得frame
-    // 1.2 已满使用lru_replacer中的方法选择淘汰页面
     if (free_list_.size()) {
         *frame_id = free_list_.back();
         free_list_.pop_back();
@@ -70,13 +67,27 @@ Page* BufferPoolManager::fetch_page(PageId page_id) {
 bool BufferPoolManager::unpin_page(PageId page_id, bool is_dirty) {
     // Todo:
     // 0. lock latch
+    std::lock_guard<std::mutex> guard(latch_);
     // 1. 尝试在page_table_中搜寻page_id对应的页P
+    auto it = page_table_.find(page_id);
     // 1.1 P在页表中不存在 return false
+    if (it == page_table_.end()){
+        return false;
+    }
     // 1.2 P在页表中存在，获取其pin_count_
+    frame_id_t frame_id = it->second;
+    Page* page = &pages_[frame_id];
     // 2.1 若pin_count_已经等于0，则返回false
+    if (page->pin_count_ == 0)
+        return false;
     // 2.2 若pin_count_大于0，则pin_count_自减一
+    else if (page->pin_count_ > 0)
+        page->pin_count_--;
     // 2.2.1 若自减后等于0，则调用replacer_的Unpin
+    if (page->pin_count_ == 0)
+        replacer_->unpin(frame_id);
     // 3 根据参数is_dirty，更改P的is_dirty_
+    page->is_dirty_ = is_dirty;
     return true;
 }
 
