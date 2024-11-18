@@ -29,10 +29,17 @@ bool BufferPoolManager::find_victim_page(frame_id_t* frame_id) {
  * @param {frame_id_t} new_frame_id 新的帧frame_id
  */
 void BufferPoolManager::update_page(Page* page, PageId new_page_id, frame_id_t new_frame_id) {
-    // Todo:
     // 1 如果是脏页，写回磁盘，并且把dirty置为false
+    if (page->is_dirty()) {
+        page->is_dirty_ = false;
+        disk_manager_->write_page(page->id_.fd, page->id_.page_no, page->data_, PAGE_SIZE);
+    }
     // 2 更新page table
+    page_table_.erase(page->id_);
+    page_table_[new_page_id] = new_frame_id;
     // 3 重置page的data，更新page id
+    memset(page->data_, 0, PAGE_SIZE);
+    page->id_ = new_page_id;
 }
 
 /**
