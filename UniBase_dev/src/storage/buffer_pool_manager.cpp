@@ -99,11 +99,19 @@ bool BufferPoolManager::unpin_page(PageId page_id, bool is_dirty) {
 bool BufferPoolManager::flush_page(PageId page_id) {
     // Todo:
     // 0. lock latch
+    std::lock_guard<std::mutex> guard(latch_);
     // 1. 查找页表,尝试获取目标页P
+    auto it = page_table_.find(page_id);
     // 1.1 目标页P没有被page_table_记录 ，返回false
+    if (it == page_table_.end()){
+        return false;
+    }
+    frame_id_t frame_id = it->second;
+    Page* page = &pages_[frame_id];
     // 2. 无论P是否为脏都将其写回磁盘。
+    disk_manager_->write_page(page->id_.fd, page->id_.page_no, page->data_, PAGE_SIZE);
     // 3. 更新P的is_dirty_
-
+    page->is_dirty_ = false;
     return true;
 }
 
