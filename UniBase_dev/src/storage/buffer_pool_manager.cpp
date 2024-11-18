@@ -46,15 +46,43 @@ void BufferPoolManager::update_page(Page* page, PageId new_page_id, frame_id_t n
  * @return {Page*} 若获得了需要的页则将其返回，否则返回nullptr
  * @param {PageId} page_id 需要获取的页的PageId
  */
-Page* BufferPoolManager::fetch_page(PageId page_id) {
+Page *BufferPoolManager::fetch_page(PageId page_id)
+{
     // Todo:
     //  1.     从page_table_中搜寻目标页
+    auto it = page_table_.find(page_id);
+    if (it != page_table_.end())
+    {
+        frame_id_t frame_id = it->second;
+        Page *page = &pages_[frame_id];
+        page->pin_count_++;
+        replacer_->Pin(frame_id);
+        return page;
+    }
     //  1.1    若目标页有被page_table_记录，则将其所在frame固定(pin)，并返回目标页。
     //  1.2    否则，尝试调用find_victim_page获得一个可用的frame，若失败则返回nullptr
+
+    frame_id_t victim_frame;
+    if (!find_victim_page(&victim_frame))
+    {
+        return nullptr;
+    }
+
     //  2.     若获得的可用frame存储的为dirty page，则须调用updata_page将page写回到磁盘
+    Page *victim_page = &pages_[victim_frame];
+    if (victim_page->is_dirty_)
+    {
+        disk_manager_->write_page(victim_page->id_.fd, victim_page->id_.page_no, victim_page->data_, PAGE_SIZE);
+    }
+
     //  3.     调用disk_manager_的read_page读取目标页到frame
+    disk_manager_->read_page(page_id.fd, page_id.page_no, victim_page->data_, PAGE_SIZE);
     //  4.     固定目标页，更新pin_count_
+    update_page(victim_page, page_id, victim_frame);
+    victim_page->pin_count_ = 1;
+    replacer_->pin(victim_frame);
     //  5.     返回目标页
+    return victim_page;
     return nullptr;
 }
 
@@ -120,8 +148,27 @@ bool BufferPoolManager::flush_page(PageId page_id) {
  * @return {Page*} 返回新创建的page，若创建失败则返回nullptr
  * @param {PageId*} page_id 当成功创建一个新的page时存储其page_id
  */
-Page* BufferPoolManager::new_page(PageId* page_id) {
+Page *BufferPoolManager::new_page(PageId *page_id)
+{
     // 1.   获得一个可用的frame，若无法获得则返回nullptr
+    frame_it_t victim_frame;
+    if (!find_victim_page(&victim_frame))
+    {
+        return nullptr;
+    }
+    Page *frame_page = &pages_[victim_frame];
+    *page_id = disk_manager_->allocate_page();
+    if (frame_page->is_dirty_)
+    {
+        disk_manager_->write_page(victim_page->id_.fd, victim_page->id_.page_no, victim_page->data_, PAGE_SIZE);
+    }
+    update_page(victim_page, page_id, victim_frame);
+    victim_page->pin_count_ = 1;
+    replacer_->pin(victim_frame);
+    //  5.     返回目标页
+    return victim_page;
+    return nullptr;
+
     // 2.   在fd对应的文件分配一个新的page_id
     // 3.   将frame的数据写回磁盘
     // 4.   固定frame，更新pin_count_
