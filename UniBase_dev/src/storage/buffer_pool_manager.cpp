@@ -202,4 +202,9 @@ bool BufferPoolManager::delete_page(PageId page_id) {
  * @param {int} fd 文件句柄
  */
 void BufferPoolManager::flush_all_pages(int fd) {
+    for(auto it : page_table_){
+        if(!flush_page(it.first)){
+            throw InternalError("BufferPoolManager::flush_all_pages Error");
+        }
+    }
 }
