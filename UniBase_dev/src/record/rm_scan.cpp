@@ -9,15 +9,9 @@
 RmScan::RmScan(const RmFileHandle *file_handle) : file_handle_(file_handle) {
     // Todo:
     // 初始化file_handle和rid（指向第一个存放了记录的位置）
-    int page_no = 0, slot_no = 0;
-    while (!file_handle_->is_record(Rid{page_no, slot_no})) {
-        if (slot_no == file_handle_->file_hdr_.num_records_per_page - 1) {
-            page_no++;
-            slot_no = 0;
-        }
-        slot_no++;
-    }
-    rid_ = Rid{page_no, slot_no};
+    // 初始化file_handle_
+    rid_ = {.page_no = RM_FIRST_RECORD_PAGE, .slot_no = -1};
+    next();
 }
 
 /**
@@ -26,15 +20,22 @@ RmScan::RmScan(const RmFileHandle *file_handle) : file_handle_(file_handle) {
 void RmScan::next() {
     // Todo:
     // 找到文件中下一个存放了记录的非空闲位置，用rid_来指向这个位置
-    int page_no = rid_.page_no, slot_no = rid_.slot_no + 1;
-    while (!file_handle_->is_record(Rid{page_no, slot_no})) {
-        if (slot_no == file_handle_->file_hdr_.num_records_per_page - 1) {
-            page_no++;
-            slot_no = 0;
+    while (rid_.page_no < file_handle_->file_hdr_.num_pages) {
+        RmPageHandle pageHandle = file_handle_->fetch_page_handle(rid_.page_no);
+        rid_.slot_no = Bitmap::next_bit(
+            true, pageHandle.bitmap,
+            file_handle_->file_hdr_.num_records_per_page,
+            rid_.slot_no);
+        if (rid_.slot_no < this->file_handle_->file_hdr_.num_records_per_page) {
+            return;
+        } else {
+            rid_ = Rid{rid_.page_no + 1, -1};
+            if (rid_.page_no >= file_handle_->file_hdr_.num_pages) {
+                rid_ = Rid{RM_NO_PAGE, -1};
+                break;
+            }
         }
-        slot_no++;
     }
-    rid_ = Rid{page_no, slot_no};
 }
 
 /**
@@ -42,12 +43,7 @@ void RmScan::next() {
  */
 bool RmScan::is_end() const {
     // Todo: 修改返回值
-    bool endPage = rid_.page_no == file_handle_->file_hdr_.num_pages;
-    bool endSlot = rid_.slot_no == file_handle_->file_hdr_.num_records_per_page - 1;
-    if (endPage && endSlot) {
-        return true;
-    }
-    return false;
+    return rid_.page_no == RM_NO_PAGE;
 }
 
 /**

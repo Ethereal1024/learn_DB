@@ -144,7 +144,6 @@ Page *BufferPoolManager::new_page(PageId *page_id) {
         this->update_page(&this->pages_[id], *page_id, id);  //更新page
         this->replacer_->pin(id);
         this->pages_[id].pin_count_ = 1;
-
     } else {
         return nullptr;
     }
