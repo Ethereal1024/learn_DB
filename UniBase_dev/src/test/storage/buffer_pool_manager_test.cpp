@@ -118,7 +118,7 @@ TEST_F(BufferPoolManagerTest, SimpleTest) {
     for (int i = 0; i < 4; ++i) {
         EXPECT_NE(nullptr, bpm->new_page(&tmp_page_id));
     }
-
+    
     // Scenario: We should be able to fetch the data we wrote a while ago.
     page0 = bpm->fetch_page(PageId{fd, 0});
     EXPECT_EQ(0, strcmp(page0->get_data(), "Hello"));

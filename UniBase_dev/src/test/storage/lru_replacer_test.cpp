@@ -140,7 +140,7 @@ TEST(LRUReplacerTest, ConcurrencyTest) {
                 }
             }));
         }
-
+        
         for (int i = 0; i < num_threads; i++) {
             threads[i].join();
         }
