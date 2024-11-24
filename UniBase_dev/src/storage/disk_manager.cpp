@@ -37,15 +37,15 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
  * @param {int} num_bytes 读取的数据量大小
  */
 void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_bytes) {
-    // 1.lseek()定位到文件头，通过(fd,page_no)可以定位指定页面及其在磁盘文件中的偏移量
-    off_t offset_position = static_cast<off_t>(page_no) * PAGE_SIZE;
-    if (lseek(fd, offset_position, SEEK_SET) == -1) {
+    int flags = fcntl(fd, F_GETFD);  //fd是否可用
+    if (flags == -1) {
         throw UnixError();
     }
-    // 2.调用read()函数
-    ssize_t bytes_read = read(fd, offset, num_bytes);
-    if (bytes_read != num_bytes) {
-        throw InternalError("DiskManger::read_page Error");
+    if(lseek(fd, page_no * PAGE_SIZE, SEEK_SET) == -1) {  //定位读写指针
+        throw UnixError();
+    }
+    if(read(fd, offset, num_bytes) == -1) { //读文件
+        throw UnixError();
     }
 }
 
