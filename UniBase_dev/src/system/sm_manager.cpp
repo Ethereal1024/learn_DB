@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <fstream>
+#include <string>
 
 #include "index/ix.h"
 #include "record/rm.h"
@@ -27,7 +28,7 @@ void SmManager::create_db(const std::string& db_name) {
     if (is_dir(db_name)) {
         throw DatabaseExistsError(db_name);
     }
-    //为数据库创建一个子目录
+    // 为数据库创建一个子目录
     std::string cmd = "mkdir " + db_name;
     if (system(cmd.c_str()) < 0) {  // 创建一个名为db_name的目录
         throw UnixError();
@@ -35,8 +36,8 @@ void SmManager::create_db(const std::string& db_name) {
     if (chdir(db_name.c_str()) < 0) {  // 进入名为db_name的目录
         throw UnixError();
     }
-    //创建系统目录
-    DbMeta *new_db = new DbMeta();
+    // 创建系统目录
+    DbMeta* new_db = new DbMeta();
     new_db->name_ = db_name;
 
     // 注意，此处ofstream会在当前目录创建(如果没有此文件先创建)和打开一个名为DB_META_NAME的文件
@@ -74,14 +75,14 @@ void SmManager::drop_db(const std::string& db_name) {
  * @description: 打开数据库，找到数据库对应的文件夹，并加载数据库元数据和相关文件
  * @param {string&} db_name 数据库名称，与文件夹同名
  */
-void SmManager::open_db(const std::string& db_name) {
-    
+void SmManager::open_db(const std::string& db_name){
+
 }
 
-/**
- * @description: 把数据库相关的元数据刷入磁盘中
- */
-void SmManager::flush_meta() {
+    /**
+     * @description: 把数据库相关的元数据刷入磁盘中
+     */
+    & *void SmManager::flush_meta() {
     // 默认清空文件
     std::ofstream ofs(DB_META_NAME);
     ofs << db_;
@@ -91,12 +92,11 @@ void SmManager::flush_meta() {
  * @description: 关闭数据库并把数据落盘
  */
 void SmManager::close_db() {
-    
 }
 
 /**
  * @description: 显示所有的表,通过测试需要将其结果写入到output.txt,详情看题目文档
- * @param {Context*} context 
+ * @param {Context*} context
  */
 void SmManager::show_tables(Context* context) {
     std::fstream outfile;
@@ -106,8 +106,8 @@ void SmManager::show_tables(Context* context) {
     printer.print_separator(context);
     printer.print_record({"Tables"}, context);
     printer.print_separator(context);
-    for (auto &entry : db_.tabs_) {
-        auto &tab = entry.second;
+    for (auto& entry : db_.tabs_) {
+        auto& tab = entry.second;
         printer.print_record({tab.name}, context);
         outfile << "| " << tab.name << " |\n";
     }
@@ -118,10 +118,10 @@ void SmManager::show_tables(Context* context) {
 /**
  * @description: 显示表的元数据
  * @param {string&} tab_name 表名称
- * @param {Context*} context 
+ * @param {Context*} context
  */
 void SmManager::desc_table(const std::string& tab_name, Context* context) {
-    TabMeta &tab = db_.get_table(tab_name);
+    TabMeta& tab = db_.get_table(tab_name);
 
     std::vector<std::string> captions = {"Field", "Type", "Index"};
     RecordPrinter printer(captions.size());
@@ -130,7 +130,7 @@ void SmManager::desc_table(const std::string& tab_name, Context* context) {
     printer.print_record(captions, context);
     printer.print_separator(context);
     // Print fields
-    for (auto &col : tab.cols) {
+    for (auto& col : tab.cols) {
         std::vector<std::string> field_info = {col.name, coltype2str(col.type), col.index ? "YES" : "NO"};
         printer.print_record(field_info, context);
     }
@@ -142,7 +142,7 @@ void SmManager::desc_table(const std::string& tab_name, Context* context) {
  * @description: 创建表
  * @param {string&} tab_name 表的名称
  * @param {vector<ColDef>&} col_defs 表的字段
- * @param {Context*} context 
+ * @param {Context*} context
  */
 void SmManager::create_table(const std::string& tab_name, const std::vector<ColDef>& col_defs, Context* context) {
     if (db_.is_table(tab_name)) {
@@ -152,7 +152,7 @@ void SmManager::create_table(const std::string& tab_name, const std::vector<ColD
     int curr_offset = 0;
     TabMeta tab;
     tab.name = tab_name;
-    for (auto &col_def : col_defs) {
+    for (auto& col_def : col_defs) {
         ColMeta col = {.tab_name = tab_name,
                        .name = col_def.name,
                        .type = col_def.type,
@@ -178,7 +178,6 @@ void SmManager::create_table(const std::string& tab_name, const std::vector<ColD
  * @param {Context*} context
  */
 void SmManager::drop_table(const std::string& tab_name, Context* context) {
-    
 }
 
 /**
@@ -188,7 +187,6 @@ void SmManager::drop_table(const std::string& tab_name, Context* context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
-    
 }
 
 /**
@@ -198,7 +196,6 @@ void SmManager::create_index(const std::string& tab_name, const std::vector<std:
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context) {
-    
 }
 
 /**
@@ -208,5 +205,35 @@ void SmManager::drop_index(const std::string& tab_name, const std::vector<std::s
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string& tab_name, const std::vector<ColMeta>& cols, Context* context) {
-    
+}
+
+void SmManager::rollback_insert(const std::string& tab_name, const Rid& rid, Context* context) {
+    auto tab = db_.get_table(tab_name);
+    auto record = fhs_.at(tab_name).get()->get_record(rid, context);
+    for (size_t i = 0; i < tab.cols.size(); i++) {
+        if (tab.cols[i].index) {
+            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->insert_entry(record->data + tab.cols[i].offset, rid, context->txn_);
+        }
+    }
+    fhs_.at(tab_name).get()->delete_record(rid, context);
+}
+
+void SmManager::rollback_delete(const std::string& tab_name, const RmRecord& record, Context* context) {
+    auto tab = db_.get_table(tab_name);
+    auto rid = fhs_.at(tab_name).get()->insert_record(record.data, context);
+    for (size_t i = 0; i < tab.cols.size(); i++) {
+        if (tab.cols[i].index) {
+            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->delete_entry(record.data + tab.cols[i].offset, nullptr);
+        }
+    }
+}
+
+void SmManager::rollback_update(const std::string& tab_name, const Rid& rid, const RmRecord& record, Context* context) {
+    auto tab = db_.get_table(tab_name);
+    auto record = fhs_.at(tab_name).get()->get_record(rid, context);
+    for (size_t i = 0; i < tab.cols.size(); i++) {
+        if (tab.cols[i].index){
+            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->insert_entry(record.data + tab.cols[i].offset, rid, context->txn_);
+        }
+    }
 }
