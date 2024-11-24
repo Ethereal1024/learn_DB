@@ -67,4 +67,18 @@ class SmManager {
     void drop_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context);
     
     void drop_index(const std::string& tab_name, const std::vector<ColMeta>& col_names, Context* context);
+
+    void rollback_insert(const std::string &tab_name, const Rid &rid, Context *context);
+
+    void rollback_delete(const std::string &tab_name, const RmRecord &record, Context *context);
+
+    void rollback_update(const std::string &tab_name, const Rid &rid, const RmRecord &record, Context *contest);
+
+    // void rollback_drop_table(const std::string &tab_name, Context *context);
+
+    // void rollback_create_table(const std::string& tab_name, Context* context);
+
+    // void rollback_create_index(const std::string &tab_name, const std::string &col_name, Context *context);
+
+    // void rollback_drop_index(const std::string &tab_name, const std::string &col_name, Context *context);
 };
