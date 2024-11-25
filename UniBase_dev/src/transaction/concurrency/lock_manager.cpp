@@ -66,13 +66,19 @@ bool LockManager::lock_exclusive_on_record(Transaction* txn, const Rid& rid, int
     return true;
 }
 
+/*
+本来这几个锁的内部实现挺相似可以写一个抽象类让这几个哥儿继承但是有点麻烦
+还是复制粘贴最稳妥
+*/
+
 /**
  * @description: 申请表级读锁
  * @return {bool} 返回加锁是否成功
  * @param {Transaction*} txn 要申请锁的事务对象指针
  * @param {int} tab_fd 目标表的fd
  */
-bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {
+bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {  
+    // 淦我写半天才反应过来tab是table的缩写
     std::unique_lock<std::mutex> lock(latch_);
     // 读未提交的级别不支持加锁
     if (txn->get_isolation_level() == IsolationLevel::READ_UNCOMMITTED) {

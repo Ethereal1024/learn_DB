@@ -1,4 +1,4 @@
-#pragma once
+#pragma once  //这个指令用于防止头文件被多次包含
 
 #include <fcntl.h>     
 #include <sys/stat.h>  

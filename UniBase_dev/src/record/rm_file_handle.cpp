@@ -7,13 +7,22 @@
  * @return {unique_ptr<RmRecord>} rid对应的记录对象指针
  */
 std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, Context* context) const {
-    auto pageHandle = fetch_page_handle(rid.page_no);                 // Get Page Handler
-    auto record = std::make_unique<RmRecord>(file_hdr_.record_size);  // That's the record.
+    // 上S锁
+    context->lock_mgr_->lock_shared_on_record(context->txn_, rid, fd_);
+    auto lockDataId = LockDataId(fd_, rid, LockDataType::RECORD);
+
+    auto pageHandle = fetch_page_handle(rid.page_no);
+    auto record = std::make_unique<RmRecord>(file_hdr_.record_size);
     if (!Bitmap::is_set(pageHandle.bitmap, rid.slot_no)) {
         throw RecordNotFoundError(rid.page_no, rid.slot_no);
     }
     memcpy(record->data, pageHandle.get_slot(rid.slot_no), file_hdr_.record_size);
     record->size = file_hdr_.record_size;
+
+    // 解S锁
+    if (context->txn_->get_isolation_level() < IsolationLevel::READ_COMMITTED) {
+        context->lock_mgr_->unlock(context->txn_, lockDataId);
+    }
     return record;
 }
 
@@ -26,13 +35,23 @@ std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid& rid, Context* cont
 Rid RmFileHandle::insert_record(char* buf, Context* context) {
     RmPageHandle pageHandle = create_page_handle();
     int freeSlot = Bitmap::first_bit(false, pageHandle.bitmap, file_hdr_.num_records_per_page);
+    auto rid = Rid{pageHandle.page->get_page_id().page_no, freeSlot};
+
+    // 上X锁
+    context->lock_mgr_->lock_exclusive_on_record(context->txn_, rid, fd_);
+    auto lockDataId = LockDataId(fd_, rid, LockDataType::RECORD);
+
     memcpy(pageHandle.get_slot(freeSlot), buf, file_hdr_.record_size);
     Bitmap::set(pageHandle.bitmap, freeSlot);
-    // If full, update the first_free_page_no.
     if (++pageHandle.page_hdr->num_records == file_hdr_.num_records_per_page) {
         file_hdr_.first_free_page_no = pageHandle.page_hdr->next_free_page_no;
     }
-    return Rid{pageHandle.page->get_page_id().page_no, freeSlot};
+
+    // 解X锁
+    if (context->txn_->get_isolation_level() < IsolationLevel::READ_COMMITTED) {
+        context->lock_mgr_->unlock(context->txn_, lockDataId);
+    }
+    return rid;
 }
 
 /**
@@ -41,6 +60,10 @@ Rid RmFileHandle::insert_record(char* buf, Context* context) {
  * @param {Context*} context
  */
 void RmFileHandle::delete_record(const Rid& rid, Context* context) {
+    // 上X锁
+    context->lock_mgr_->lock_exclusive_on_record(context->txn_, rid, fd_);
+    auto lockDataId = LockDataId(fd_, rid, LockDataType::RECORD);
+
     RmPageHandle pageHandle = fetch_page_handle(rid.page_no);
     if (!Bitmap::is_set(pageHandle.bitmap, rid.slot_no)) {
         throw PageNotExistError("", rid.page_no);
@@ -52,6 +75,11 @@ void RmFileHandle::delete_record(const Rid& rid, Context* context) {
         return;
     }
     release_page_handle(pageHandle);
+
+    // 解X锁
+    if (context->txn_->get_isolation_level() < IsolationLevel::READ_COMMITTED) {
+        context->lock_mgr_->unlock(context->txn_, lockDataId);
+    }
 }
 
 /**
@@ -61,12 +89,21 @@ void RmFileHandle::delete_record(const Rid& rid, Context* context) {
  * @param {Context*} context
  */
 void RmFileHandle::update_record(const Rid& rid, char* buf, Context* context) {
+    // 上X锁
+    context->lock_mgr_->lock_exclusive_on_record(context->txn_, rid, fd_);
+    auto lockDataId = LockDataId(fd_, rid, LockDataType::RECORD);
+
     RmPageHandle pageHandle = fetch_page_handle(rid.page_no);
     // 一定要记得更新bitmap
     if (!Bitmap::is_set(pageHandle.bitmap, rid.slot_no)) {
         throw PageNotExistError("", rid.page_no);
     }
     memcpy(pageHandle.get_slot(rid.slot_no), buf, file_hdr_.record_size);
+
+    // 解X锁
+    if (context->txn_->get_isolation_level() < IsolationLevel::READ_COMMITTED) {
+        context->lock_mgr_->unlock(context->txn_, lockDataId);
+    }
 }
 
 /**
@@ -93,7 +130,7 @@ RmPageHandle RmFileHandle::fetch_page_handle(int page_no) const {
  * @return {RmPageHandle} 新的PageHandle
  */
 RmPageHandle RmFileHandle::create_new_page_handle() {
-    PageId pageId = {fd_, INVALID_PAGE_ID};  // 0 or fd_, Not sure.
+    PageId pageId = {fd_, INVALID_PAGE_ID};
     Page* newPage = buffer_pool_manager_->new_page(&pageId);
     auto pageHangle = RmPageHandle(&file_hdr_, newPage);
     if (newPage != nullptr) {

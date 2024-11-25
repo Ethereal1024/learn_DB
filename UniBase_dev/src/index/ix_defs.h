@@ -1,4 +1,4 @@
-#pragma once
+// #pragma once  //这个指令用于防止头文件被多次包含
 
 #include <vector>
 
@@ -8,18 +8,20 @@
 constexpr int IX_NO_PAGE = -1;
 constexpr int IX_FILE_HDR_PAGE = 0;
 constexpr int IX_LEAF_HEADER_PAGE = 1;
-constexpr int IX_INIT_ROOT_PAGE = 2;
+constexpr int IX_INIT_ROOT_PAGE = 2;  //初始根节点的页号
 constexpr int IX_INIT_NUM_PAGES = 3;
-constexpr int IX_MAX_COL_LEN = 512;
+constexpr int IX_MAX_COL_LEN = 512;   //列的最大长度
 
 class IxFileHdr {
 public: 
-    page_id_t first_free_page_no_;      // 文件中第一个空闲的磁盘页面的页面号
+    page_id_t first_free_page_no_;      // 文件中第一个空闲的磁盘页面的页面号   
+    //当从 B+ 树中删除一个节点或页时，所释放的空间实际上并不会立即被丢弃，而是标记为空闲。
+    //first_free_page_no_ 记录第一个空闲页面的页号，以便在后续的插入操作中快速找到一个可以重用的页面。
     int num_pages_;                     // 磁盘文件中页面的数量
     page_id_t root_page_;               // B+树根节点对应的页面号
     int col_num_;                       // 索引包含的字段数量
     std::vector<ColType> col_types_;    // 字段的类型
-    std::vector<int> col_lens_;         // 字段的长度
+    std::vector<int> col_lens_;         // 字段的长度       //这里为什么用vector来存呢，难道长度不固定吗
     int col_tot_len_;                   // 索引包含的字段的总长度
     int btree_order_;                   // # children per page 每个结点最多可插入的键值对数量
     int keys_size_;                     // keys_size = (btree_order + 1) * col_tot_len
