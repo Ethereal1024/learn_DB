@@ -123,10 +123,9 @@ void IxNodeHandle::insert_pairs(int pos, const char *key, const Rid *rid, int n)
         set_rid(i + n, *get_rid(i));
     }
     // 插入
-    size_t length = 0;
     for (int j = 0; j < n; j++) {
-        set_key(pos + j, key + file_hdr->col_tot_len_ * j);
-        set_rid(pos + j, rid[j]);  // rid为值数组的首地址，直接数组索引
+        set_key(pos + j, key + file_hdr->col_tot_len_ * j);  // key每个单位长度为file_hdr->col_len
+        set_rid(pos + j, rid[j]);                            // rid为值数组的首地址，直接数组索引
     }
     set_size(key_size + n);
 }
@@ -215,7 +214,6 @@ IxIndexHandle::IxIndexHandle(DiskManager *disk_manager, BufferPoolManager *buffe
  */
 std::pair<IxNodeHandle *, bool> IxIndexHandle::find_leaf_page(const char *key, Operation operation,
                                                               Transaction *transaction, bool find_first) {
-    // Todo:
     // 1. 获取根节点
     // 2. 从根节点开始不断向下查找目标key
     // 3. 找到包含该key值的叶子结点停止查找，并返回叶子节点
@@ -226,7 +224,7 @@ std::pair<IxNodeHandle *, bool> IxIndexHandle::find_leaf_page(const char *key, O
         buffer_pool_manager_->unpin_page(node->get_page_id(), false);
         node = this->fetch_node(page_no);  // 迭代查找，每次定位到下一层子树
     }
-    buffer_pool_manager_->unpin_page(node->get_page_id(), false);
+    buffer_pool_manager_->unpin_page(node->get_page_id(), false);//取消固定，且不是脏页（操作中并没有修改）
     return std::make_pair(nullptr, true);
     return std::make_pair(nullptr, false);
 }
