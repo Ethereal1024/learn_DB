@@ -212,7 +212,7 @@ void SmManager::rollback_insert(const std::string& tab_name, const Rid& rid, Con
     for (auto index : tab.indexes) {
         IxIndexHandle* indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
         for (auto column : index.cols) {
-            indexHandle->insert_entry(record->data + column.offset, rid, context->txn_);
+            indexHandle->delete_entry(record->data + column.offset, nullptr);
         }
     }
     fhs_.at(tab_name).get()->delete_record(rid, context);
@@ -224,7 +224,7 @@ void SmManager::rollback_delete(const std::string& tab_name, const RmRecord& rec
     for (auto index : tab.indexes) {
         IxIndexHandle* indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
         for (auto column : index.cols) {
-            indexHandle->delete_entry(record.data + column.offset, nullptr);
+            indexHandle->insert_entry(record.data + column.offset, rid, context->txn_);
         }
     }
 }
@@ -239,3 +239,20 @@ void SmManager::rollback_update(const std::string& tab_name, const Rid& rid, con
         }
     }
 }
+
+// void SmManager::rollback_update(const std::string &tab_name, const Rid &rid, const RmRecord &record, Context *context) {
+//     auto tab = db_.get_table(tab_name);
+//     auto rec = fhs_.at(tab_name).get()->get_record(rid, context);
+//     // delete entry
+//     for (size_t i=0; i<tab.cols.size(); i++){
+//         if (tab.cols[i].index)
+//             ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->delete_entry(rec->data+tab.cols[i].offset, nullptr);
+//     }
+//     // update record
+//     fhs_.at(tab_name).get()->update_record(rid, record.data, context);
+//     // insert entry
+//     for (size_t i=0; i<tab.cols.size(); i++){
+//         if (tab.cols[i].index)
+//             ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->insert_entry(record.data+tab.cols[i].offset, rid, context->txn_);
+//     }
+// }
