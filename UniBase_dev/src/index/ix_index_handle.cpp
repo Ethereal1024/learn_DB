@@ -363,7 +363,29 @@ page_id_t IxIndexHandle::insert_entry(const char *key, const Rid &value, Transac
     // 3. 如果结点已满，分裂结点，并把新结点的相关信息插入父节点
     // 提示：记得unpin page；若当前叶子节点是最右叶子节点，则需要更新file_hdr_.last_leaf；记得处理并发的上锁
 
-    return -1;
+   std::scoped_lock lock{root_latch_};
+
+    IxNodeHandle* leaf_node = find_leaf_page(key, Operation::INSERT, transaction).first;
+    int size0 = leaf_node->get_size();
+    int node_size = leaf_node->insert(key,value);
+    if(size0 == node_size){  // key数量没变，说明失败
+        buffer_pool_manager_->unpin_page(leaf_node->get_page_id(), false);
+        return false;
+    }
+    else{
+        page_id_t page_no=leaf_node->get_page_no();
+
+        if(node_size == leaf_node->get_max_size()){  // 满了
+            IxNodeHandle* new_node = split(leaf_node);  // 分裂
+            this->insert_into_parent(leaf_node, new_node->get_key(0), new_node, transaction);  // 信息插入父节点
+            if(page_no==file_hdr_->last_leaf_){  // 更新last_leaf
+                file_hdr_->last_leaf_ = new_node->get_page_no();
+            }
+            buffer_pool_manager_->unpin_page(new_node->get_page_id(), true);
+        }
+        buffer_pool_manager_->unpin_page(leaf_node->get_page_id(), true);
+        return true;
+    }
 }
 
 /**
