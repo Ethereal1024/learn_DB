@@ -75,14 +75,13 @@ void SmManager::drop_db(const std::string& db_name) {
  * @description: 打开数据库，找到数据库对应的文件夹，并加载数据库元数据和相关文件
  * @param {string&} db_name 数据库名称，与文件夹同名
  */
-void SmManager::open_db(const std::string& db_name){
-
+void SmManager::open_db(const std::string& db_name) {
 }
 
-    /**
-     * @description: 把数据库相关的元数据刷入磁盘中
-     */
-    & *void SmManager::flush_meta() {
+/**
+ * @description: 把数据库相关的元数据刷入磁盘中
+ */
+void SmManager::flush_meta() {
     // 默认清空文件
     std::ofstream ofs(DB_META_NAME);
     ofs << db_;
@@ -210,9 +209,10 @@ void SmManager::drop_index(const std::string& tab_name, const std::vector<ColMet
 void SmManager::rollback_insert(const std::string& tab_name, const Rid& rid, Context* context) {
     auto tab = db_.get_table(tab_name);
     auto record = fhs_.at(tab_name).get()->get_record(rid, context);
-    for (size_t i = 0; i < tab.cols.size(); i++) {
-        if (tab.cols[i].index) {
-            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->insert_entry(record->data + tab.cols[i].offset, rid, context->txn_);
+    for (auto index : tab.indexes) {
+        IxIndexHandle* indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
+        for (auto column : index.cols) {
+            indexHandle->insert_entry(record->data + column.offset, rid, context->txn_);
         }
     }
     fhs_.at(tab_name).get()->delete_record(rid, context);
@@ -221,9 +221,10 @@ void SmManager::rollback_insert(const std::string& tab_name, const Rid& rid, Con
 void SmManager::rollback_delete(const std::string& tab_name, const RmRecord& record, Context* context) {
     auto tab = db_.get_table(tab_name);
     auto rid = fhs_.at(tab_name).get()->insert_record(record.data, context);
-    for (size_t i = 0; i < tab.cols.size(); i++) {
-        if (tab.cols[i].index) {
-            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->delete_entry(record.data + tab.cols[i].offset, nullptr);
+    for (auto index : tab.indexes) {
+        IxIndexHandle* indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
+        for (auto column : index.cols) {
+            indexHandle->delete_entry(record.data + column.offset, nullptr);
         }
     }
 }
@@ -231,9 +232,10 @@ void SmManager::rollback_delete(const std::string& tab_name, const RmRecord& rec
 void SmManager::rollback_update(const std::string& tab_name, const Rid& rid, const RmRecord& record, Context* context) {
     auto tab = db_.get_table(tab_name);
     auto record = fhs_.at(tab_name).get()->get_record(rid, context);
-    for (size_t i = 0; i < tab.cols.size(); i++) {
-        if (tab.cols[i].index){
-            ihs_.at(get_ix_manager()->get_index_name(tab_name, i)).get()->insert_entry(record.data + tab.cols[i].offset, rid, context->txn_);
+    for (auto index : tab.indexes) {
+        IxIndexHandle* indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
+        for (auto column : index.cols) {
+            indexHandle->insert_entry(record.data + column.offset, rid, context->txn_);
         }
     }
 }
