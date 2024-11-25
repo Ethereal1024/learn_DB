@@ -37,15 +37,15 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
  * @param {int} num_bytes 读取的数据量大小
  */
 void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_bytes) {
-    // 1.lseek()定位到文件头，通过(fd,page_no)可以定位指定页面及其在磁盘文件中的偏移量
-    off_t offset_position = static_cast<off_t>(page_no) * PAGE_SIZE;
-    if (lseek(fd, offset_position, SEEK_SET) == -1) {
+    int flags = fcntl(fd, F_GETFD);  //fd是否可用
+    if (flags == -1) {
         throw UnixError();
     }
-    // 2.调用read()函数
-    ssize_t bytes_read = read(fd, offset, num_bytes);
-    if (bytes_read != num_bytes) {
-        throw InternalError("DiskManger::read_page Error");
+    if(lseek(fd, page_no * PAGE_SIZE, SEEK_SET) == -1) {  //定位读写指针
+        throw UnixError();
+    }
+    if(read(fd, offset, num_bytes) == -1) { //读文件
+        throw UnixError();
     }
 }
 
@@ -99,10 +99,10 @@ bool DiskManager::is_file(const std::string &path) {
  * @param {string} &path
  */
 void DiskManager::create_file(const std::string &path) {
-    int fd = open(path.c_str(), O_WRONLY | O_CREAT, 0644);
+    int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
     if (fd == -1) {
         if (errno == EEXIST) {
-            throw InternalError("File already exist.");
+            throw FileExistsError("File already exist.");
         } else {
             throw InternalError("File creating failed.");
         }
@@ -116,11 +116,11 @@ void DiskManager::create_file(const std::string &path) {
  */
 void DiskManager::destroy_file(const std::string &path) {
     if (unlink(path.c_str()) != 0) {
-        throw UnixError();
+        throw FileNotFoundError(path);
     }
 
     if (path2fd_.count(path)) {
-        throw InternalError("File is Open");
+        throw FileNotClosedError(path);
     }
 }
 
@@ -131,11 +131,11 @@ void DiskManager::destroy_file(const std::string &path) {
  */
 int DiskManager::open_file(const std::string &path) {
     if (path2fd_.find(path) != path2fd_.end()) {
-        throw InternalError("File already open.");
+        throw FileNotClosedError(path);
     }  // 检查文件是否已经被打开过
-    int fd = open(path.c_str(), O_RDWR, 0644);
+    int fd = open(path.c_str(), O_RDWR);
     if (fd == -1) {
-        throw InternalError("File open failed.");
+        throw FileNotFoundError(path);
     }
     path2fd_[path] = fd;
     fd2path_[fd] = path;
@@ -147,8 +147,8 @@ int DiskManager::open_file(const std::string &path) {
  * @param {int} fd 打开的文件的文件句柄
  */
 void DiskManager::close_file(int fd) {
-    if (fd2path_.find(fd) != fd2path_.end()) {
-        throw InternalError("File never open.");
+    if (fd2path_.find(fd) == fd2path_.end()) {
+        throw FileNotOpenError(fd);
     }
 
     if (close(fd) == -1) {
