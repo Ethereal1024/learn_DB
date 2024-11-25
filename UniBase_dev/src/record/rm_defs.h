@@ -2,6 +2,7 @@
 
 #include "defs.h"
 #include "storage/buffer_pool_manager.h"
+#include <iostream>
 
 constexpr int RM_NO_PAGE = -1;
 constexpr int RM_FILE_HDR_PAGE = 0;
@@ -15,6 +16,15 @@ struct RmFileHdr {
     int num_records_per_page;   // 每个页面最多能存储的元组个数
     int first_free_page_no;     // 文件中当前第一个包含空闲空间的页面号（初始化为-1）
     int bitmap_size;            // 每个页面bitmap大小
+
+    void print(){
+        std::cout << "[  RmFileHdr imformation  ]\n";
+        std::cout << "record_size: " << record_size << "\n";
+        std::cout << "num_pages: " << num_pages << "\n";
+        std::cout << "num_records_per_page: " << num_records_per_page << "\n";
+        std::cout << "first_free_page_no: " << first_free_page_no << "\n";
+        std::cout << "bitmap_size: " << bitmap_size << "\n\n";
+    }
 };
 
 /* 表数据文件中每个页面的页头，记录每个页面的元信息 */

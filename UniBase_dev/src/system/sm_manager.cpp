@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <fstream>
+#include <string>
 
 #include "index/ix.h"
 #include "record/rm.h"
