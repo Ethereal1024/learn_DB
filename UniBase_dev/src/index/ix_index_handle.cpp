@@ -123,9 +123,10 @@ void IxNodeHandle::insert_pairs(int pos, const char *key, const Rid *rid, int n)
         set_rid(i + n, *get_rid(i));
     }
     // 插入
+    size_t length = 0;
     for (int j = 0; j < n; j++) {
-        set_key(pos + j, key + file_hdr->col_lens_[0] * j);  // key每个单位长度为file_hdr->col_len
-        set_rid(pos + j, rid[j]);                            // rid为值数组的首地址，直接数组索引
+        set_key(pos + j, key + file_hdr->col_tot_len_ * j);
+        set_rid(pos + j, rid[j]);  // rid为值数组的首地址，直接数组索引
     }
     set_size(key_size + n);
 }
