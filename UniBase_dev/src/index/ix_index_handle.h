@@ -25,7 +25,7 @@ inline int ix_compare(const char *a, const char *b, ColType type, int col_len) {
             throw InternalError("Unexpected data type");
     }
 }
-
+//定义了另一个内联函数 ix_compare，用于比较多列的值
 inline int ix_compare(const char* a, const char* b, const std::vector<ColType>& col_types, const std::vector<int>& col_lens) {
     int offset = 0;
     for(size_t i = 0; i < col_types.size(); ++i) {
@@ -57,7 +57,7 @@ class IxNodeHandle {
         rids = reinterpret_cast<Rid *>(keys + file_hdr->keys_size_);
     }
 
-    int get_size() { return page_hdr->num_key; }
+    int get_size() { return page_hdr->num_key;  }//已插入的keys数量，key_idx∈[0,num_key)
 
     void set_size(int size) { page_hdr->num_key = size; }
 
@@ -94,8 +94,8 @@ class IxNodeHandle {
 
     Rid *get_rid(int rid_idx) const { return &rids[rid_idx]; }
 
-    void set_key(int key_idx, const char *key) { memcpy(keys + key_idx * file_hdr->col_tot_len_, key, file_hdr->col_tot_len_); }
-
+    void set_key(int key_idx, const char *key) { memcpy(keys + key_idx * file_hdr->col_tot_len_, key, file_hdr->col_tot_len_); }//传入数组索引和值的地址
+     //这是通过keys的起始位置算目标位置的长度（第几个*数据长度）//源地址//字节数
     void set_rid(int rid_idx, const Rid &rid) { rids[rid_idx] = rid; }
 
     int lower_bound(const char *target) const;
