@@ -46,6 +46,7 @@ class IxManager {
 
     void create_index(const std::string &filename, const std::vector<ColMeta>& index_cols) {
         std::string ix_name = get_index_name(filename, index_cols);
+
         // Create index file
         disk_manager_->create_file(ix_name);
         // Open index file

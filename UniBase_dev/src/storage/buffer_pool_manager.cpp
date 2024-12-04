@@ -88,10 +88,6 @@ Page *BufferPoolManager::fetch_page(PageId page_id) {
  */
 bool BufferPoolManager::unpin_page(PageId page_id, bool is_dirty) {
     std::scoped_lock lock{latch_};
-    // for(auto it : page_table_){
-    //     std::cout << it.first.page_no << " ";
-    // }
-    // std::cout << std::endl;
     if (this->page_table_.find(page_id) == this->page_table_.end()) {
         return false;
     }
