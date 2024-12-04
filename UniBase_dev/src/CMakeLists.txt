@@ -1,4 +1,5 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(analyze)
 add_subdirectory(record)

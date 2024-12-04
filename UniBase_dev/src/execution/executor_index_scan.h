@@ -5,6 +5,7 @@
 #include "executor_abstract.h"
 #include "index/ix.h"
 #include "system/sm.h"
+#include <map>
 
 // 定义比较操作符
 enum CompOp
@@ -93,7 +94,8 @@ public:
 
         // 处理扫描条件，确保连接运算的条件谓词正确
         std::map<CompOp, CompOp> swap_op = {
-            {OP_EQ, OP_EQ}, {OP_NE, OP_NE}, {OP_LT, OP_GT}, {OP_GT, OP_LT}, {OP_LE, OP_GE}, {OP_GE, OP_LE}};
+            {OP_EQ, OP_EQ}, {OP_NE, OP_NE}, {OP_LT, OP_GT}, {OP_GT, OP_LT}, {OP_LE, OP_GE}, {OP_GE, OP_LE},
+        };
 
         for (auto &cond : conds_)
         {

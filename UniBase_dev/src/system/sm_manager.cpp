@@ -212,6 +212,13 @@ void SmManager::create_table(const std::string &tab_name, const std::vector<ColD
     }
     // Create & open record file
     int record_size = curr_offset;  // record_size就是col meta所占的大小（表的元数据也是以记录的形式进行存储的）
+
+    if (disk_manager_->is_file(tab_name)) {
+        std::string cmd = "rm -rf " + tab_name;
+        if (system(cmd.c_str()) < 0) {
+            throw UnixError();
+        }
+    }
     rm_manager_->create_file(tab_name, record_size);
     db_.tabs_[tab_name] = tab;
     // fhs_[tab_name] = rm_manager_->open_file(tab_name);
@@ -346,6 +353,6 @@ void SmManager::rollback_update(const std::string &tab_name, const Rid &rid, con
     for (auto index : tab.indexes) {
         IxIndexHandle *indexHandle = ihs_.at(get_ix_manager()->get_index_name(tab_name, index.cols)).get();
         for (auto column : index.cols)
-        indexHandle->insert_entry(record.data + column.offset, rid, context->txn_);
+            indexHandle->insert_entry(record.data + column.offset, rid, context->txn_);
     }
 }
