@@ -7,17 +7,6 @@
 #include "system/sm.h"
 #include <map>
 
-// 定义比较操作符
-enum CompOp
-{
-    OP_EQ, // Equal
-    OP_NE, // Not equal
-    OP_LT, // Less than
-    OP_LE, // Less than or equal to
-    OP_GT, // Greater than
-    OP_GE  // Greater than or equal to
-};
-
 // 示例 Value 类，假设包含一个简单的 int 值
 class Value
 {

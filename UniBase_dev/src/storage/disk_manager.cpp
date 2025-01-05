@@ -88,9 +88,8 @@ void DiskManager::destroy_dir(const std::string &path) {
  * @param {string} &path 指定路径文件
  */
 bool DiskManager::is_file(const std::string &path) {
-    // 用struct stat获取文件信息
-    struct stat st;
-    return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode);
+    std::ifstream file(path);
+    return file.good();
 }
 
 /**
@@ -99,14 +98,6 @@ bool DiskManager::is_file(const std::string &path) {
  * @param {string} &path
  */
 void DiskManager::create_file(const std::string &path) {
-    // 由于后续好几项测试无法通过的原因，这里就采取这种比较粗暴的策略
-    if (is_file(path)) {
-        std::string cmd = "rm -rf " + path;
-        if (system(cmd.c_str()) < 0) {
-            throw UnixError();
-        }
-    }
-
     int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
     if (fd == -1) {
         if (errno == EEXIST) {
